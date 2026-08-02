@@ -18,6 +18,9 @@ importers:
 
   apps/api:
     dependencies:
+      '@akaclass/database':
+        specifier: workspace:*
+        version: link:../../packages/database
       '@nestjs/common':
         specifier: ^11.0.1
         version: 11.1.28(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1)
@@ -143,9 +146,13 @@ importers:
 
   packages/database:
     dependencies:
+      '@nestjs/common':
+        specifier: ^11.1.28
+        version: 11.1.28(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1)
       '@prisma/client':
         specifier: ^6.19.3
         version: 6.19.3(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3)
+    devDependencies:
       prisma:
         specifier: ^6.19.3
         version: 6.19.3(typescript@5.9.3)
