@@ -1,3 +1,1 @@
-export * from "./client";
-export * from "./prisma.service";
-export * from "./prisma.module";
+export * from "./client.js";

@@ -6,10 +6,9 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "dev": "nest start --watch",
-    "build": "nest build",
-    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "start": "nest start",
+    "dev": "nest start --watch --webpack false",
+    "build": "nest build --webpack false",
+    "start": "nest start --webpack false",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
