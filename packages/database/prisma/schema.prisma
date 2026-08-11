@@ -7,11 +7,305 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-/**
- * |--------------------------------------------------------------------------
- * | ENUMS
- * |--------------------------------------------------------------------------
- */
+model School {
+  id          String            @id @default(uuid())
+  name        String
+  code        String            @unique
+  email       String?
+  phone       String?
+  address     String?
+  logoUrl     String?
+  status      SchoolStatus      @default(ACTIVE)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  sessions    AcademicSession[]
+  auditLogs   AuditLog[]
+  campuses    Campus[]
+  classLevels ClassLevel[]
+  settings    SchoolSettings?
+  students    Student[]
+  subjects    Subject[]
+  users       User[]
+
+  @@map("schools")
+}
+
+model SchoolSettings {
+  id            String   @id @default(uuid())
+  schoolId      String   @unique
+  country       String   @default("Nigeria")
+  currency      String   @default("NGN")
+  timezone      String   @default("Africa/Lagos")
+  gradingSystem String   @default("PERCENTAGE")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  school        School   @relation(fields: [schoolId], references: [id])
+
+  @@map("school_settings")
+}
+
+model Campus {
+  id        String       @id @default(uuid())
+  schoolId  String
+  name      String
+  code      String
+  address   String?
+  status    CampusStatus @default(ACTIVE)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  school    School       @relation(fields: [schoolId], references: [id])
+  users     User[]
+
+  @@unique([schoolId, code])
+  @@map("campuses")
+}
+
+model User {
+  id            String         @id @default(uuid())
+  schoolId      String
+  campusId      String?
+  firstName     String
+  lastName      String
+  email         String
+  phone         String?
+  passwordHash  String
+  status        UserStatus     @default(ACTIVE)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  sessions      UserSession[]
+  auditLogs     AuditLog[]
+  refreshTokens RefreshToken[]
+  roles         UserRole[]
+  campus        Campus?        @relation(fields: [campusId], references: [id])
+  school        School         @relation(fields: [schoolId], references: [id])
+
+  @@unique([schoolId, email])
+  @@map("users")
+}
+
+model UserSession {
+  id         String   @id @default(uuid())
+  userId     String
+  device     String?
+  ipAddress  String?
+  lastActive DateTime
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Role {
+  id          String           @id @default(uuid())
+  name        String           @unique
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  permissions RolePermission[]
+  users       UserRole[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id        String           @id @default(uuid())
+  name      String           @unique
+  createdAt DateTime         @default(now())
+  roles     RolePermission[]
+
+  @@map("permissions")
+}
+
+model UserRole {
+  id     String @id @default(uuid())
+  userId String
+  roleId String
+  role   Role   @relation(fields: [roleId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@unique([userId, roleId])
+  @@map("user_roles")
+}
+
+model RolePermission {
+  id           String     @id @default(uuid())
+  roleId       String
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id])
+  role         Role       @relation(fields: [roleId], references: [id])
+
+  @@unique([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  schoolId  String
+  userId    String?
+  action    String
+  entity    String
+  entityId  String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+  school    School   @relation(fields: [schoolId], references: [id])
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@index([schoolId])
+  @@index([entity, entityId])
+  @@map("audit_logs")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model AcademicSession {
+  id          String         @id @default(uuid())
+  schoolId    String
+  name        String
+  startDate   DateTime
+  endDate     DateTime
+  isCurrent   Boolean        @default(false)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  school      School         @relation(fields: [schoolId], references: [id])
+  terms       AcademicTerm[]
+  enrollments Enrollment[]
+
+  @@map("academic_sessions")
+}
+
+model AcademicTerm {
+  id        String          @id @default(uuid())
+  sessionId String
+  name      String
+  startDate DateTime
+  endDate   DateTime
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  session   AcademicSession @relation(fields: [sessionId], references: [id])
+
+  @@map("academic_terms")
+}
+
+model ClassLevel {
+  id        String     @id @default(uuid())
+  schoolId  String
+  name      String
+  order     Int
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  arms      ClassArm[]
+  school    School     @relation(fields: [schoolId], references: [id])
+
+  @@unique([schoolId, name])
+  @@map("class_levels")
+}
+
+model ClassArm {
+  id           String         @id @default(uuid())
+  name         String
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  classLevelId String
+  code         String
+  classLevel   ClassLevel     @relation(fields: [classLevelId], references: [id])
+  subjects     ClassSubject[]
+  enrollments  Enrollment[]
+
+  @@unique([classLevelId, code])
+  @@map("class_arms")
+}
+
+model Subject {
+  id            String         @id @default(uuid())
+  schoolId      String
+  name          String
+  code          String
+  isCore        Boolean        @default(false)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  classSubjects ClassSubject[]
+  school        School         @relation(fields: [schoolId], references: [id])
+
+  @@unique([schoolId, code])
+  @@map("subjects")
+}
+
+model ClassSubject {
+  id         String   @id @default(uuid())
+  classArmId String
+  subjectId  String
+  classArm   ClassArm @relation(fields: [classArmId], references: [id])
+  subject    Subject  @relation(fields: [subjectId], references: [id])
+
+  @@unique([classArmId, subjectId])
+  @@map("class_subjects")
+}
+
+model Student {
+  id            String            @id @default(uuid())
+  schoolId      String
+  studentNumber String
+  firstName     String
+  lastName      String
+  middleName    String?
+  dateOfBirth   DateTime?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  gender        Gender
+  enrollments   Enrollment[]
+  guardians     StudentGuardian[]
+  school        School            @relation(fields: [schoolId], references: [id])
+
+  @@unique([schoolId, studentNumber])
+  @@map("students")
+}
+
+model Guardian {
+  id        String            @id @default(uuid())
+  firstName String
+  lastName  String
+  phone     String
+  email     String?
+  createdAt DateTime          @default(now())
+  students  StudentGuardian[]
+
+  @@map("guardians")
+}
+
+model StudentGuardian {
+  id           String   @id @default(uuid())
+  studentId    String
+  guardianId   String
+  relationship String
+  guardian     Guardian @relation(fields: [guardianId], references: [id])
+  student      Student  @relation(fields: [studentId], references: [id])
+
+  @@unique([studentId, guardianId])
+  @@map("student_guardians")
+}
+
+model Enrollment {
+  id         String           @id @default(uuid())
+  studentId  String
+  classArmId String
+  sessionId  String
+  createdAt  DateTime         @default(now())
+  status     EnrollmentStatus @default(ACTIVE)
+  classArm   ClassArm         @relation(fields: [classArmId], references: [id])
+  session    AcademicSession  @relation(fields: [sessionId], references: [id])
+  student    Student          @relation(fields: [studentId], references: [id])
+
+  @@unique([studentId, sessionId])
+  @@map("enrollments")
+}
 
 enum UserStatus {
   ACTIVE
@@ -40,458 +334,4 @@ enum EnrollmentStatus {
   COMPLETED
   TRANSFERRED
   WITHDRAWN
-}
-
-/**
- * |--------------------------------------------------------------------------
- * | SCHOOL TENANCY
- * |--------------------------------------------------------------------------
- */
-
-model School {
-  id String @id @default(uuid())
-
-  name String
-  code String @unique
-
-  email   String?
-  phone   String?
-  address String?
-  logoUrl String?
-
-  status SchoolStatus @default(ACTIVE)
-
-  settings SchoolSettings?
-
-  campuses Campus[]
-
-  users User[]
-
-  sessions AcademicSession[]
-
-  classLevels ClassLevel[]
-
-  subjects Subject[]
-
-  students Student[]
-
-  auditLogs AuditLog[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("schools")
-}
-
-model SchoolSettings {
-  id String @id @default(uuid())
-
-  schoolId String @unique
-
-  school School @relation(fields: [schoolId], references: [id])
-
-  country String @default("Nigeria")
-
-  currency String @default("NGN")
-
-  timezone String @default("Africa/Lagos")
-
-  gradingSystem String @default("PERCENTAGE")
-
-  createdAt DateTime @default(now())
-
-  updatedAt DateTime @updatedAt
-
-  @@map("school_settings")
-}
-
-model Campus {
-  id String @id @default(uuid())
-
-  schoolId String
-
-  school School @relation(fields: [schoolId], references: [id])
-
-  name String
-
-  code String
-
-  address String?
-
-  status CampusStatus @default(ACTIVE)
-
-  users User[]
-
-  createdAt DateTime @default(now())
-
-  updatedAt DateTime @updatedAt
-
-  @@unique([schoolId, code])
-  @@map("campuses")
-}
-
-/**
- * |--------------------------------------------------------------------------
- * | USER MANAGEMENT + RBAC
- * |--------------------------------------------------------------------------
- */
-
-model User {
-  id String @id @default(uuid())
-
-  schoolId String
-
-  school School @relation(fields: [schoolId], references: [id])
-
-  campusId String?
-
-  campus Campus? @relation(fields: [campusId], references: [id])
-
-  firstName String
-
-  lastName String
-
-  email String
-
-  phone String?
-
-  passwordHash String
-
-  status UserStatus @default(ACTIVE)
-
-  roles UserRole[]
-
-  auditLogs AuditLog[]
-
-  createdAt DateTime @default(now())
-
-  updatedAt DateTime @updatedAt
-
-  @@unique([schoolId, email])
-  @@map("users")
-}
-
-model Role {
-  id String @id @default(uuid())
-
-  name String @unique
-
-  users UserRole[]
-
-  permissions RolePermission[]
-
-  createdAt DateTime @default(now())
-
-  updatedAt DateTime @updatedAt
-
-  @@map("roles")
-}
-
-model Permission {
-  id String @id @default(uuid())
-
-  name String @unique
-
-  roles RolePermission[]
-
-  createdAt DateTime @default(now())
-
-  @@map("permissions")
-}
-
-model UserRole {
-  id String @id @default(uuid())
-
-  userId String
-
-  user User @relation(fields: [userId], references: [id])
-
-  roleId String
-
-  role Role @relation(fields: [roleId], references: [id])
-
-  @@unique([userId, roleId])
-  @@map("user_roles")
-}
-
-model RolePermission {
-  id String @id @default(uuid())
-
-  roleId String
-
-  role Role @relation(fields: [roleId], references: [id])
-
-  permissionId String
-
-  permission Permission @relation(fields: [permissionId], references: [id])
-
-  @@unique([roleId, permissionId])
-  @@map("role_permissions")
-}
-
-model AuditLog {
-  id String @id @default(uuid())
-
-  schoolId String
-
-  school School @relation(fields: [schoolId], references: [id])
-
-  userId String?
-
-  user User? @relation(fields: [userId], references: [id])
-
-  action String
-
-  entity String
-
-  entityId String?
-
-  metadata Json?
-
-  createdAt DateTime @default(now())
-
-  @@index([schoolId])
-  @@index([entity, entityId])
-  @@map("audit_logs")
-}
-
-/**
- * |--------------------------------------------------------------------------
- * | ACADEMIC CALENDAR
- * |--------------------------------------------------------------------------
- */
-
-model AcademicSession {
-  id String @id @default(uuid())
-
-  schoolId String
-
-  school School @relation(fields: [schoolId], references: [id])
-
-  name String
-
-  startDate DateTime
-
-  endDate DateTime
-
-  isCurrent Boolean @default(false)
-
-  terms AcademicTerm[]
-
-  enrollments Enrollment[]
-
-  createdAt DateTime @default(now())
-
-  updatedAt DateTime @updatedAt
-
-  @@map("academic_sessions")
-}
-
-model AcademicTerm {
-  id String @id @default(uuid())
-
-  sessionId String
-
-  session AcademicSession @relation(fields: [sessionId], references: [id])
-
-  name String
-
-  startDate DateTime
-
-  endDate DateTime
-
-  createdAt DateTime @default(now())
-
-  updatedAt DateTime @updatedAt
-
-  @@map("academic_terms")
-}
-
-/**
- * |--------------------------------------------------------------------------
- * | CLASS MANAGEMENT
- * |--------------------------------------------------------------------------
- */
-
-model ClassLevel {
-  id String @id @default(uuid())
-
-  schoolId String
-
-  school School @relation(fields: [schoolId], references: [id])
-
-  name String
-
-  order Int
-
-  arms ClassArm[]
-
-  createdAt DateTime @default(now())
-
-  updatedAt DateTime @updatedAt
-
-  @@unique([schoolId, name])
-  @@map("class_levels")
-}
-
-model ClassArm {
-  id String @id @default(uuid())
-
-  classLevelId String
-
-  classLevel ClassLevel @relation(fields: [classLevelId], references: [id])
-
-  name String
-
-  code String
-
-  enrollments Enrollment[]
-
-  subjects ClassSubject[]
-
-  createdAt DateTime @default(now())
-
-  updatedAt DateTime @updatedAt
-
-  @@unique([classLevelId, code])
-  @@map("class_arms")
-}
-
-/**
- * |--------------------------------------------------------------------------
- * | SUBJECT MANAGEMENT
- * |--------------------------------------------------------------------------
- */
-
-model Subject {
-  id String @id @default(uuid())
-
-  schoolId String
-
-  school School @relation(fields: [schoolId], references: [id])
-
-  name String
-
-  code String
-
-  isCore Boolean @default(false)
-
-  classSubjects ClassSubject[]
-
-  createdAt DateTime @default(now())
-
-  updatedAt DateTime @updatedAt
-
-  @@unique([schoolId, code])
-  @@map("subjects")
-}
-
-model ClassSubject {
-  id String @id @default(uuid())
-
-  classArmId String
-
-  classArm ClassArm @relation(fields: [classArmId], references: [id])
-
-  subjectId String
-
-  subject Subject @relation(fields: [subjectId], references: [id])
-
-  @@unique([classArmId, subjectId])
-  @@map("class_subjects")
-}
-
-/**
- * |--------------------------------------------------------------------------
- * | STUDENT MANAGEMENT
- * |--------------------------------------------------------------------------
- */
-
-model Student {
-  id String @id @default(uuid())
-
-  schoolId String
-
-  school School @relation(fields: [schoolId], references: [id])
-
-  studentNumber String
-
-  firstName String
-
-  middleName String?
-
-  lastName String
-
-  dateOfBirth DateTime?
-
-  gender Gender
-
-  enrollments Enrollment[]
-
-  guardians StudentGuardian[]
-
-  createdAt DateTime @default(now())
-
-  updatedAt DateTime @updatedAt
-
-  @@unique([schoolId, studentNumber])
-  @@map("students")
-}
-
-model Guardian {
-  id String @id @default(uuid())
-
-  firstName String
-
-  lastName String
-
-  phone String
-
-  email String?
-
-  students StudentGuardian[]
-
-  createdAt DateTime @default(now())
-
-  @@map("guardians")
-}
-
-model StudentGuardian {
-  id String @id @default(uuid())
-
-  studentId String
-
-  student Student @relation(fields: [studentId], references: [id])
-
-  guardianId String
-
-  guardian Guardian @relation(fields: [guardianId], references: [id])
-
-  relationship String
-
-  @@unique([studentId, guardianId])
-  @@map("student_guardians")
-}
-
-model Enrollment {
-  id String @id @default(uuid())
-
-  studentId String
-
-  student Student @relation(fields: [studentId], references: [id])
-
-  classArmId String
-
-  classArm ClassArm @relation(fields: [classArmId], references: [id])
-
-  sessionId String
-
-  session AcademicSession @relation(fields: [sessionId], references: [id])
-
-  status EnrollmentStatus @default(ACTIVE)
-
-  createdAt DateTime @default(now())
-
-  @@unique([studentId, sessionId])
-  @@map("enrollments")
 }

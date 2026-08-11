@@ -1,8 +1,9 @@
 {
   "compilerOptions": {
     "target": "ES2023",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+
+    "module": "CommonJS",
+    "moduleResolution": "Node",
 
     "strict": true,
 
@@ -10,19 +11,17 @@
 
     "declaration": true,
     "declarationMap": true,
+    "emitDeclarationOnly": false,
 
     "sourceMap": true,
 
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
 
-    "resolveJsonModule": true,
-
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
 
     "composite": true,
-
     "incremental": true
   }
 }
